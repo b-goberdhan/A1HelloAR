@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 enum TargetingState
 {
@@ -22,10 +23,13 @@ public class RobotHandler : MonoBehaviour
     private TargetingState state;
     public bool IsDone { get { return state == TargetingState.Three; } }
     public GameObject CurrentDestination { get; private set; }
-
+    private bool _hasNotStarted = true;
+    private Text textui;
     void Start()
     {
         state = TargetingState.None;
+        textui = GameObject.Find("Text").GetComponent<Text>();
+        transform.GetChild(0).gameObject.SetActive(false);
         ImageTracker.TargetLoad += ImageTracker_TargetLoad;
         ImageTracker.TargetUnload += ImageTracker_TargetUnload;
     }
@@ -87,27 +91,59 @@ public class RobotHandler : MonoBehaviour
         }
     }
 
-    // Update is called once per frame
-    void FixedUpdate()
+    private bool isFacingNorth()
     {
-        float step = MoveSpeed * Time.deltaTime;
-        switch (state)
+
+        Input.compass.enabled = true;
+        int location = (int)Input.compass.trueHeading;
+        textui.text = "Get your device to face \nsouth in order to get started \ncurrent deggrees off: " + (location - 180);
+        return location == 180;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+        if (_hasNotStarted)
         {
-            case TargetingState.None:
-                AdjustLocationAndRotation(FirstLocation, step);
-                CurrentDestination = FirstLocation;
-                break;
-            case TargetingState.First:
-                AdjustLocationAndRotation(SecondLocation, step);
-                CurrentDestination = SecondLocation;
-                break;
-            case TargetingState.Second:
-            case TargetingState.Three:
-                AdjustLocationAndRotation(ThirdLocation, step);
-                CurrentDestination = ThirdLocation;
-                break;
+            if (isFacingNorth())
+            {
+                _hasNotStarted = false;
+                textui.gameObject.SetActive(false);
+            }
         }
-        SetState();
+        else
+        {
+            if (totalNumberOfTargets != 3)
+            {
+                transform.GetChild(0).gameObject.SetActive(false);
+                return;
+            }
+            else
+            {
+                transform.GetChild(0).gameObject.SetActive(true);
+            }
+            float step = MoveSpeed * Time.deltaTime;
+            switch (state)
+            {
+                case TargetingState.None:
+                    AdjustLocationAndRotation(FirstLocation, step);
+                    CurrentDestination = FirstLocation;
+                    break;
+                case TargetingState.First:
+                    AdjustLocationAndRotation(SecondLocation, step);
+                    CurrentDestination = SecondLocation;
+                    break;
+                case TargetingState.Second:
+                case TargetingState.Three:
+                    AdjustLocationAndRotation(ThirdLocation, step);
+                    CurrentDestination = ThirdLocation;
+                    break;
+            }
+            SetState();
+        }
+
+        
 
     }
 }
